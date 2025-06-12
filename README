@@ -1,0 +1,19 @@
+步驟一：建立 build 子目錄
+cd ~/MyProject
+mkdir -p build    # 如果還沒建立
+
+步驟二：進入 build 目錄
+cd build
+
+步驟三：使用 cmake .. 產生 Makefile
+cmake ..
+
+
+步驟四：執行 make 開始編譯
+make
+
+============================
+快速一次完成
+cd ~/MyProject
+cmake -S . -B build
+cmake --build build
