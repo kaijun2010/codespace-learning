@@ -1,1 +1,4 @@
 build
+# Ignore ctags file
+tags
+src/tags
