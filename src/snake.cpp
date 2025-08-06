@@ -1,148 +1,172 @@
 #include "snake.h"
 #include <chrono>
-#include <thread>
 #include <cstring>
+#include <thread>
 
 SnakeGame::SnakeGame(int h, int w)
-    : height_(h), width_(w), win_(nullptr), direction_(1), running_(true), rng_(std::random_device{}()) {
-    Init();
+    : height_(h), width_(w), win_(nullptr), direction_(1), running_(true),
+      rng_(std::random_device{}()) {
+  Init();
 }
 
-SnakeGame::~SnakeGame() {
-    endwin();
-}
+SnakeGame::~SnakeGame() { endwin(); }
 
 void SnakeGame::Init() {
-    initscr();
-    cbreak();
-    noecho();
-    curs_set(0);
-    win_ = newwin(height_, width_, 0, 0);
-    keypad(win_, true);
-    nodelay(win_, true);
-    box(win_, 0, 0);
-    wrefresh(win_);
-    Reset();
+  initscr();
+  cbreak();
+  noecho();
+  curs_set(0);
+  win_ = newwin(height_, width_, 0, 0);
+  keypad(win_, true);
+  nodelay(win_, true);
+  box(win_, 0, 0);
+  wrefresh(win_);
+  Reset();
 }
 
 void SnakeGame::Reset() {
-    direction_ = 1;
-    running_ = true;
-    snake_.clear();
-    snake_.push_back({height_ / 2, width_ / 2});
-    SpawnFood();
+  direction_ = 1;
+  running_ = true;
+  snake_.clear();
+  snake_.push_back({height_ / 2, width_ / 2});
+  SpawnFood();
 }
 
 void SnakeGame::SpawnFood() {
-    std::uniform_int_distribution<int> distY(1, height_ - 2);
-    std::uniform_int_distribution<int> distX(1, width_ - 2);
-    Position pos;
-    do {
-        pos = {distY(rng_), distX(rng_)};
-    } while (IsCollision(pos));
-    food_ = pos;
+  std::uniform_int_distribution<int> distY(1, height_ - 2);
+  std::uniform_int_distribution<int> distX(1, width_ - 2);
+  Position pos;
+  do {
+    pos = {distY(rng_), distX(rng_)};
+  } while (IsCollision(pos));
+  food_ = pos;
 }
 
-bool SnakeGame::IsCollision(const Position& pos) const {
-    for (const auto& p : snake_) {
-        if (p.y == pos.y && p.x == pos.x) return true;
-    }
-    return false;
+bool SnakeGame::IsCollision(const Position &pos) const {
+  for (const auto &p : snake_) {
+    if (p.y == pos.y && p.x == pos.x)
+      return true;
+  }
+  return false;
 }
 
 void SnakeGame::Draw() const {
-    werase(win_);
-    box(win_, 0, 0);
-    mvwaddch(win_, food_.y, food_.x, 'O');
-    for (const auto& p : snake_) {
-        mvwaddch(win_, p.y, p.x, '#');
-    }
-    wrefresh(win_);
+  werase(win_);
+  box(win_, 0, 0);
+  mvwaddch(win_, food_.y, food_.x, 'O');
+  for (const auto &p : snake_) {
+    mvwaddch(win_, p.y, p.x, '#');
+  }
+  wrefresh(win_);
 }
 
 void SnakeGame::Input() {
-    int ch = wgetch(win_);
-    switch (ch) {
-        case KEY_LEFT:
-            if (direction_ != 1) direction_ = 0;
-            break;
-        case KEY_RIGHT:
-            if (direction_ != 0) direction_ = 1;
-            break;
-        case KEY_UP:
-            if (direction_ != 3) direction_ = 2;
-            break;
-        case KEY_DOWN:
-            if (direction_ != 2) direction_ = 3;
-            break;
-        case 'q':
-            running_ = false;
-            break;
-        default:
-            break;
-    }
+  int ch = wgetch(win_);
+  switch (ch) {
+  case KEY_LEFT:
+    if (direction_ != 1)
+      direction_ = 0;
+    break;
+  case KEY_RIGHT:
+    if (direction_ != 0)
+      direction_ = 1;
+    break;
+  case KEY_UP:
+    if (direction_ != 3)
+      direction_ = 2;
+    break;
+  case KEY_DOWN:
+    if (direction_ != 2)
+      direction_ = 3;
+    break;
+  case 'q':
+    running_ = false;
+    break;
+  default:
+    break;
+  }
 }
 
 void SnakeGame::Logic() {
-    Position head = snake_.front();
-    switch (direction_) {
-        case 0: head.x--; break;
-        case 1: head.x++; break;
-        case 2: head.y--; break;
-        case 3: head.y++; break;
-    }
+  Position head = snake_.front();
+  switch (direction_) {
+  case 0:
+    head.x--;
+    break;
+  case 1:
+    head.x++;
+    break;
+  case 2:
+    head.y--;
+    break;
+  case 3:
+    head.y++;
+    break;
+  }
 
-    if (head.x <= 0 || head.x >= width_ - 1 || head.y <= 0 || head.y >= height_ - 1 || IsCollision(head)) {
-        running_ = false;
-        return;
-    }
+  if (head.x <= 0 || head.x >= width_ - 1 || head.y <= 0 ||
+      head.y >= height_ - 1 || IsCollision(head)) {
+    running_ = false;
+    return;
+  }
 
-    snake_.push_front(head);
-    if (head.y == food_.y && head.x == food_.x) {
-        SpawnFood();
-    } else {
-        snake_.pop_back();
-    }
+  snake_.push_front(head);
+  if (head.y == food_.y && head.x == food_.x) {
+    SpawnFood();
+  } else {
+    snake_.pop_back();
+  }
 }
 
 void SnakeGame::Run() {
-    bool play = true;
-    while (play) {
-        // Start screen
-        werase(win_);
-        box(win_, 0, 0);
-        const char* start_msg = "Start game? (Y/N)";
-        mvwprintw(win_, height_ / 2, (width_ - static_cast<int>(strlen(start_msg))) / 2, "%s", start_msg);
-        wrefresh(win_);
-        nodelay(win_, false);
-        int ch;
-        while ((ch = wgetch(win_)) != 'y' && ch != 'Y' && ch != 'n' && ch != 'N') {
-        }
-        if (ch == 'n' || ch == 'N') break;
-        nodelay(win_, true);
-
-        Reset();
-
-        while (running_) {
-            Draw();
-            Input();
-            Logic();
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-
-        // Game over screen
-        werase(win_);
-        box(win_, 0, 0);
-        const char* over_msg = "Game Over! Try again? (Y/N)";
-        mvwprintw(win_, height_ / 2, (width_ - static_cast<int>(strlen(over_msg))) / 2, "%s", over_msg);
-        wrefresh(win_);
-        nodelay(win_, false);
-        while ((ch = wgetch(win_)) != 'y' && ch != 'Y' && ch != 'n' && ch != 'N') {
-        }
-        if (ch == 'n' || ch == 'N') play = false;
-        else {
-            nodelay(win_, true);
-            Reset();
-        }
+  bool play = true;
+  while (play) {
+    // Start screen
+    werase(win_);
+    box(win_, 0, 0);
+    const char *start_screen[] = {"==================", " Welcome Snake ",
+                                  " Start game? (Y/N)", "=================="};
+    int lines = sizeof(start_screen) / sizeof(start_screen[0]);
+    int start_y = height_ / 2 - lines / 2;
+    for (int i = 0; i < lines; ++i) {
+      mvwprintw(win_, start_y + i,
+                (width_ - static_cast<int>(strlen(start_screen[i]))) / 2, "%s",
+                start_screen[i]);
     }
+    wrefresh(win_);
+    nodelay(win_, false);
+    int ch;
+    while ((ch = wgetch(win_)) != 'y' && ch != 'Y' && ch != 'n' && ch != 'N') {
+    }
+    if (ch == 'n' || ch == 'N')
+      break;
+    nodelay(win_, true);
+
+    Reset();
+
+    while (running_) {
+      Draw();
+      Input();
+      Logic();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    // Game over screen
+    werase(win_);
+    box(win_, 0, 0);
+    const char *over_msg = "Game Over! Try again? (Y/N)";
+    mvwprintw(win_, height_ / 2,
+              (width_ - static_cast<int>(strlen(over_msg))) / 2, "%s",
+              over_msg);
+    wrefresh(win_);
+    nodelay(win_, false);
+    while ((ch = wgetch(win_)) != 'y' && ch != 'Y' && ch != 'n' && ch != 'N') {
+    }
+    if (ch == 'n' || ch == 'N')
+      play = false;
+    else {
+      nodelay(win_, true);
+      Reset();
+    }
+  }
 }
