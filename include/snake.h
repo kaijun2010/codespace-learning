@@ -16,6 +16,7 @@ public:
 
 private:
     void Init();
+    void Reset();
     void Draw() const;
     void Input();
     void Logic();

@@ -1,9 +1,10 @@
 #include "snake.h"
 #include <chrono>
 #include <thread>
+#include <cstring>
 
 SnakeGame::SnakeGame(int h, int w)
-    : height_(h), width_(w), direction_(1), running_(true), rng_(std::random_device{}()) {
+    : height_(h), width_(w), win_(nullptr), direction_(1), running_(true), rng_(std::random_device{}()) {
     Init();
 }
 
@@ -20,9 +21,16 @@ void SnakeGame::Init() {
     keypad(win_, true);
     nodelay(win_, true);
     box(win_, 0, 0);
+    wrefresh(win_);
+    Reset();
+}
+
+void SnakeGame::Reset() {
+    direction_ = 1;
+    running_ = true;
+    snake_.clear();
     snake_.push_back({height_ / 2, width_ / 2});
     SpawnFood();
-    wrefresh(win_);
 }
 
 void SnakeGame::SpawnFood() {
@@ -98,10 +106,43 @@ void SnakeGame::Logic() {
 }
 
 void SnakeGame::Run() {
-    while (running_) {
-        Draw();
-        Input();
-        Logic();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    bool play = true;
+    while (play) {
+        // Start screen
+        werase(win_);
+        box(win_, 0, 0);
+        const char* start_msg = "Start game? (Y/N)";
+        mvwprintw(win_, height_ / 2, (width_ - static_cast<int>(strlen(start_msg))) / 2, "%s", start_msg);
+        wrefresh(win_);
+        nodelay(win_, false);
+        int ch;
+        while ((ch = wgetch(win_)) != 'y' && ch != 'Y' && ch != 'n' && ch != 'N') {
+        }
+        if (ch == 'n' || ch == 'N') break;
+        nodelay(win_, true);
+
+        Reset();
+
+        while (running_) {
+            Draw();
+            Input();
+            Logic();
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+
+        // Game over screen
+        werase(win_);
+        box(win_, 0, 0);
+        const char* over_msg = "Game Over! Try again? (Y/N)";
+        mvwprintw(win_, height_ / 2, (width_ - static_cast<int>(strlen(over_msg))) / 2, "%s", over_msg);
+        wrefresh(win_);
+        nodelay(win_, false);
+        while ((ch = wgetch(win_)) != 'y' && ch != 'Y' && ch != 'n' && ch != 'N') {
+        }
+        if (ch == 'n' || ch == 'N') play = false;
+        else {
+            nodelay(win_, true);
+            Reset();
+        }
     }
 }
