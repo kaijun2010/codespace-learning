@@ -1,0 +1,171 @@
+#!/bin/sh
+
+################################################################
+# stovol start up
+# Usage: ./stovol -l -m  $GRPID $LLM_CONFIG_FILE $OPT_DBDATA_SQLITE $FUT_DBDATA_SQLITE $OPT_MATCH_FILE $FUT_MATCH_FILE $OPT_TPC_FILE
+# Ex:    ./stovol -l -m 1 llm_sirs.ini ../data/opt/db_data.datDB_ORG ../data/fut/db_data.datDB_ORG ../data/opt/match_p.dat ../data/fut/match_p.dat ../data/opt/tpc.db
+# Ex:    ./stovol -r -l -m 1 llm_sirs.ini ../data/opt/db_data.datDB_ORG ../data/fut/db_data.datDB_ORG ../data/opt/match_p.dat ../data/fut/match_p.dat ../data/opt/tpc.db
+# MODE: -r (recovery mode)
+################################################################
+
+# Set up environment variables
+#export TRADE_KIND=0             # 0:日盤, 1:夜盤
+#export oLOG=.                   # 測試環境日誌目錄 (本目錄)
+#export LOG=$oLOG                # 統一使用 LOG
+#export ETL_PATH=/tmp/stovol_etl # ETL directory
+#export NFS_PATH=/tmp/stovol_nfs # NFS directory
+#export NFS_PATH_T=/tmp/stovol_nfs_t # NFS_T directory
+#export ETL_DB_SECOND_PATH=/tmp/stovol_etl_second # ETL second directory
+#export NFS_PATH_T=../data/opt/
+#NFS_PATH_T=/hds1/changer/
+#export STOVOL_DEBUG_PGSEQ=123
+#export STOVOL_DEBUG_LEVELS=5
+
+# Program parameters
+#GRPID=1
+#LLM_SIRS_CONFIG_FILE=$BIN/shell/llm_sirs.ini
+#DBDATA_SQLITE /hds1/changer/db_data.datDB
+#FUT_DBDATA_SQLITE=${CROSS_NFS_PATH_T}/db_data.datDB
+#MATCH_FILE_P=$NFS_PATH_T/match_p.dat           
+#FUT_MATCH_FILE=${CROSS_NFS_PATH_T}/match_p.dat
+#TPC_FILE=$NFS_PATH_T/tpc.db
+
+# Get MODE from command line argument
+MODE=${1:-""}
+
+echo "==========================================="
+echo "STOVOL Test Script"
+echo "==========================================="
+echo "Environment Variables:"
+echo "PRODUCT_TYPE: $PRODUCT_TYPE"
+echo "TRADE_KIND: $TRADE_KIND"
+echo "LOG: $LOG"
+echo "ETL_PATH: $ETL_PATH"
+echo "NFS_PATH: $NFS_PATH"
+echo "NFS_PATH_T: $NFS_PATH_T"
+echo "ETL_DB_SECOND_PATH: $ETL_DB_SECOND_PATH"
+echo "OPT_TPC_FILE: $OPT_TPC_FILE"
+echo "==========================================="
+echo "Program Parameters:"
+echo "GRPID: $GRPID"
+echo "LLM_CONFIG_FILE: $LLM_CONFIG_FILE"
+echo "OPT_DBDATA_SQLITE: $OPT_DBDATA_SQLITE"
+echo "FUT_DBDATA_SQLITE: $FUT_DBDATA_SQLITE"
+echo "OPT_MATCH_FILE: $OPT_MATCH_FILE"
+echo "FUT_MATCH_FILE: $FUT_MATCH_FILE"
+echo "OPT_TPC_FILE: $OPT_TPC_FILE"
+echo "==========================================="
+
+# Check if required files exist
+echo "Checking required files..."
+MISSING_FILES=()
+
+if [ ! -f "$LLM_CONFIG_FILE" ]; then
+    MISSING_FILES+=("$LLM_CONFIG_FILE")
+fi
+
+if [ ! -f "$OPT_DBDATA_SQLITE" ]; then
+    MISSING_FILES+=("$OPT_DBDATA_SQLITE")
+fi
+
+if [ ! -f "$FUT_DBDATA_SQLITE" ]; then
+    MISSING_FILES+=("$FUT_DBDATA_SQLITE")
+fi
+
+if [ ! -f "$OPT_MATCH_FILE" ]; then
+    MISSING_FILES+=("$OPT_MATCH_FILE")
+fi
+
+if [ ! -f "$FUT_MATCH_FILE" ]; then
+    MISSING_FILES+=("$FUT_MATCH_FILE")
+fi
+
+if [ ! -f "$OPT_TPC_FILE" ]; then
+    MISSING_FILES+=("$OPT_TPC_FILE")
+fi
+
+# Check if any files are missing
+if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+    echo "==========================================="
+    echo "ERROR: Required files are missing!"
+    echo "==========================================="
+    for file in "${MISSING_FILES[@]}"; do
+        echo "Missing file: $file"
+    done
+    echo "==========================================="
+    echo "Please create the missing files before running the test."
+    echo "Program execution aborted."
+    echo "==========================================="
+    exit 1
+fi
+
+echo "All required files exist. Proceeding with [stovol] Start up.."
+
+# Build command line
+STOVOL_CMD="../stovol"
+
+#  -r: Start in recovery mode.
+if [ $# != 2 ] && [ $# != 3 ] ; then
+  echo "Usage1: stovol_s <grp_id> -- stovol start script"
+  echo "Usage2: stovol_s <grp_id> [-r] -- stovol restart mode"
+  echo "Ex:  /stovol_s 1"
+  echo "Ex:  /stovol_s 1 -r"
+  exit 1
+fi
+
+LD_LIBRARY_PATH=/usr/local/lib/sparcv9:/usr/local64/lib:/usr/local/lib:/usr/lib/sparcv9:/usr/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH
+
+#kaijun
+FUT_MATCH_FILE=$MATCH_FILE       ; export FUT_MATCH_FILE
+FUT_MATCH_FILE_TP=$MATCH_FILE_P_FTPR_STF       ; export FUT_MATCH_FILE_TP
+GID=$1
+MODE=$3
+
+#Settings in llm.ini
+LLM_TX_LOG=$LOG/stovol_${GID}_llmTx.log	 ; export LLM_TX_LOG
+LLM_RX_LOG=$LOG/stovol_${GID}_llmRx.log	 ; export LLM_RX_LOG
+LLM_RCMS_LOG=$LOG/stovol_${GID}_llmRcms.log	 ; export LLM_RCMS_LOG
+
+
+#stovol -l -m 1 llm_sirs.ini ../data/opt/db_data.datDB_ORG ../data/fut/db_data.datDB_ORG ../data/opt/match_p.dat ../data/fut/match_p.dat ../data/opt/tpc.db
+if [ `/bin/id | /bin/awk '{ print $2}'` = "gid=110(op)" ] ; then
+    cd $BIN/stovol
+    if [ -f "stovol_${GID}.pid" ] ; then
+      echo "Err: stovol's pid file exist (stovol_${GID}.pid)"
+      exit 1
+    fi
+    if [ ! -x stovol ] ; then
+      echo "Err: stovol program not exist"
+      exit 1
+    fi
+
+    $BIN/shell/newlog.sh $LOG/stovol_${GID}.log
+    #MODE -r need match_p_tp.dat
+    if [ "$MODE" = "-r" ] ; then
+        echo  "${ONLOAD_RCMS:-} $BIN/stovol/stovol -l -m ${MODE} ${GID} $LLM_SIRS_CONFIG_FILE $DBDATA_SQLITE $FUT_DBDATA_SQLITE $MATCH_FILE_P $FUT_MATCH_FILE $TPC_FILE >> $LOG/stovol_${GID}.log"
+        ${ONLOAD_RCMS:-} $BIN/stovol/stovol -l -m ${MODE} ${GID} $LLM_SIRS_CONFIG_FILE $DBDATA_SQLITE $FUT_DBDATA_SQLITE $MATCH_FILE_P $FUT_MATCH_FILE $TPC_FILE >> $LOG/stovol_${GID}.log 2>&1  &
+    else
+        echo  "${ONLOAD_RCMS:-} $BIN/stovol/stovol -l -m ${MODE} ${GID} $LLM_SIRS_CONFIG_FILE $DBDATA_SQLITE $FUT_DBDATA_SQLITE $MATCH_FILE_P $FUT_MATCH_FILE $TPC_FILE >> $LOG/stovol_${GID}.log"
+        ${ONLOAD_RCMS:-} $BIN/stovol/stovol -l -m ${MODE} ${GID} $LLM_SIRS_CONFIG_FILE $DBDATA_SQLITE $FUT_DBDATA_SQLITE $MATCH_FILE_P $FUT_MATCH_FILE $TPC_FILE >> $LOG/stovol_${GID}.log 2>&1  &
+    fi
+    echo $! > stovol_${GID}.pid
+else
+    if [ -f "stovol_${GID}.pid" ] ; then
+      echo "Err: stovol's pid file exist  (stovol_${GID}.pid)"
+      exit 1
+    fi
+    if [ ! -x $BIN/stovol ] ; then
+      echo "Err: stovol program not exist"
+      exit 1
+    fi
+
+    $BAT/newlog.sh stovol_${GID}.log
+    if [ "$MODE" = "-r" ] ; then
+        ${ONLOAD_RCMS:-} $BIN/stovol -l -m ${MODE} ${GID} $LLM_SIRS_CONFIG_FILE $DBDATA_SQLITE $FUT_DBDATA_SQLITE $MATCH_FILE_P $FUT_MATCH_FILE $TPC_FILE >> stovol_${GID}.log 2>&1  &
+    else
+        ${ONLOAD_RCMS:-} $BIN/stovol -l -m ${MODE} ${GID} $LLM_SIRS_CONFIG_FILE $DBDATA_SQLITE $FUT_DBDATA_SQLITE $MATCH_FILE_P $FUT_MATCH_FILE $TPC_FILE >> stovol_${GID}.log 2>&1  &
+    fi
+    echo $! > stovol_${GID}.pid
+
+fi

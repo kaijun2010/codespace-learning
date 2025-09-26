@@ -1,0 +1,14 @@
+#!/bin/sh
+if [ $# != 2 ] ; then
+  echo "Usage: stovol_r <grp_id> -- stovol restart script"
+  exit 1
+fi
+if [ `/bin/id | /bin/awk '{ print $2}'` = "gid=110(op)" ] ; then
+    #-- force kill self again
+    $BIN/mcc/stovol_x $1
+    $BIN/mcc/stovol_s $1 -r
+else
+    #-- force kill self again
+    $BIN/stovol_x $1
+    $BIN/stovol_s $1 -r
+fi

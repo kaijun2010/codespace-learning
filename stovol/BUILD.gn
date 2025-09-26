@@ -1,0 +1,59 @@
+libsrcs = [
+ "src/env.cpp",
+ "src/stovol.cpp",
+ "src/llm.cpp",
+ "src/prodinfo.cpp",
+ # 新增 match 處理與 MTF Buffer 實作檔案
+ "src/match_processor.cpp",
+ "src/mtfbuffer.cpp",
+ "src/calc_targetF.cpp",
+ "src/BlackScholes.cpp",  # 加入 Black-Scholes IV 計算
+]depslib = [
+  "//commlib/atomic_io",
+  "//commlib/atomic_io:BTime",
+  "//commlib/llm_comm:llm_commX",
+  "//commlib/mcc:mccX",
+  "//opt/LogViewer:LogViewerX",
+  "//opt/convlib:convlibX",
+]
+
+executable("stovol") {
+  sources = libsrcs
+  cflags_cc = [
+    # for ubuntu gcc 7.3
+    "-Wno-format-overflow",
+    "-Wno-unused-result",
+    "-Wno-format-truncation",
+    "-Wno-stringop-truncation",
+  ]
+  include_dirs = [ "//", "include" ]
+  defines = [
+    "DEBUG_SQLITE",
+    "USE_MSG",
+    "ATOMIC_ALL_VERSION",
+  ]
+  ldflags = [ "-lsqlite3" ]
+  deps = depslib
+}
+
+executable("stovol_ut") {
+  sources = libsrcs
+  cflags_cc = [
+    # for ubuntu gcc 7.3
+    "-Wno-format-overflow",
+    "-Wno-unused-result",
+    "-Wno-format-truncation",
+    "-Wno-stringop-truncation",
+  ]
+  include_dirs = [ "//", "include" ]
+  defines = [
+    "DEBUG_SQLITE",
+    "USE_MSG",
+    "DEBUG",
+    "DEV_TEST_MODE",
+  ]
+  ldflags = [ "-lsqlite3" ]
+  deps = depslib
+}
+
+# vim:et sw=2 ts=2 ai

@@ -1,0 +1,8 @@
+#!/bin/sh
+if [ $# != 2 ] ; then
+  echo "Usage: stovol_x <grp_id> -- stovol stop script"
+  exit 1
+fi
+if [ `/bin/id | /bin/awk '{ print $2}'` = "gid=110(op)" ] ; then
+    $BIN/shell/kill.sh $BIN/stovol/stovol_$1.pid 1
+fi
